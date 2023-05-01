@@ -75,7 +75,6 @@ module.exports.likeCard = async (req, res) => {
     { $addToSet: { likes: req.user._id } },
     { new: true },
   )
-    .orFail()
     .then((card) => {
       if (!card) {
         return res
@@ -102,7 +101,6 @@ module.exports.dislikeCard = async (req, res) => {
     { $pull: { likes: req.user._id } },
     { new: true },
   )
-    .orFail()
     .then((card) => {
       if (!card) {
         return res
