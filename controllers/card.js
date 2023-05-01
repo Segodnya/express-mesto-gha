@@ -29,7 +29,6 @@ module.exports.createCard = async (req, res) => {
   })
     .then((card) => res.status(SUCCESS_CREATED_CODE).send(card))
     .catch((err) => {
-      // if (err.name === 'ValidationError') {
       if (err instanceof mongoose.Error.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
@@ -56,7 +55,6 @@ module.exports.deleteCard = async (req, res) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      // if (err.name === 'CastError') {
       if (err instanceof mongoose.Error.CastError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
@@ -80,7 +78,6 @@ const updateLikes = async (req, res, update) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      // if (err.name === 'CastError') {
       if (err instanceof mongoose.Error.CastError) {
         return res
           .status(INCORRECT_DATA_ERROR_CODE)
