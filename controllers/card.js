@@ -1,4 +1,4 @@
-const { MongooseError } = require('mongoose');
+// const { MongooseError } = require('mongoose');
 const Card = require('../models/card');
 const {
   DEFAULT_SUCCESS_CODE,
@@ -30,8 +30,8 @@ module.exports.createCard = async (req, res) => {
   })
     .then((card) => res.status(SUCCESS_CREATED_CODE).send(card))
     .catch((err) => {
-      // if (err.name === 'ValidationError') {
-      if (err instanceof MongooseError.ValidationError) {
+      if (err.name === 'ValidationError') {
+        // if (err instanceof MongooseError.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -57,8 +57,8 @@ module.exports.deleteCard = async (req, res) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      // if (err.name === 'CastError') {
-      if (err instanceof MongooseError.CastError) {
+      if (err.name === 'CastError') {
+        // if (err instanceof MongooseError.CastError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -87,8 +87,8 @@ const handleCardLike = async (req, res, options) => {
     }
     return res.send(updatedCard);
   } catch (err) {
-    // if (err.name === 'CastError') {
-    if (err instanceof MongooseError.CastError) {
+    if (err.name === 'CastError') {
+      // if (err instanceof MongooseError.CastError) {
       return res.status(INCORRECT_DATA_ERROR_CODE).send({
         message: 'Переданы не валидные данные',
       });
