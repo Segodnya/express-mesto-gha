@@ -1,3 +1,4 @@
+const { MongooseError } = require('mongoose');
 const Card = require('../models/card');
 const {
   DEFAULT_SUCCESS_CODE,
@@ -6,6 +7,8 @@ const {
   DEFAULT_ERROR_CODE,
   INCORRECT_DATA_ERROR_CODE,
 } = require('../utils/constants');
+
+const USER_REF = [{ path: 'likes', model: 'user' }];
 
 module.exports.getCards = async (req, res) => {
   await Card.find({})
@@ -27,15 +30,17 @@ module.exports.createCard = async (req, res) => {
   })
     .then((card) => res.status(SUCCESS_CREATED_CODE).send(card))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
+      // if (err.name === 'ValidationError') {
+      if (err instanceof MongooseError.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
-      } else {
-        res
-          .status(DEFAULT_ERROR_CODE)
-          .send({ message: 'Не удалось создать карточку' });
+        return;
       }
+
+      res
+        .status(DEFAULT_ERROR_CODE)
+        .send({ message: 'Не удалось создать карточку' });
     });
 };
 
@@ -52,7 +57,8 @@ module.exports.deleteCard = async (req, res) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
+      // if (err.name === 'CastError') {
+      if (err instanceof MongooseError.CastError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -64,54 +70,39 @@ module.exports.deleteCard = async (req, res) => {
     });
 };
 
-module.exports.likeCard = async (req, res) => {
-  await Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $addToSet: { likes: req.user._id } },
-    { new: true },
-  )
-    .then((card) => {
-      if (!card) {
-        return res
-          .status(NOT_FOUND_ERROR_CODE)
-          .send({ message: 'Карточка не найдена' });
-      }
-      return res.status(DEFAULT_SUCCESS_CODE).send(card);
-    })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        return res
-          .status(INCORRECT_DATA_ERROR_CODE)
-          .send({ message: 'Переданы не валидные данные' });
-      }
-      return res
-        .status(DEFAULT_ERROR_CODE)
-        .send({ message: 'Не удалось изменить карточку' });
+const handleCardLike = async (req, res, options) => {
+  try {
+    const action = options.addLike ? '$addToSet' : '$pull';
+
+    const updatedCard = await Card.findOneAndUpdate(
+      req.params.cardId,
+      { [action]: { likes: req.user._id } },
+      { new: true },
+    ).populate(USER_REF);
+
+    if (!updatedCard) {
+      return res.status(NOT_FOUND_ERROR_CODE).send({
+        message: 'Карточка не найдена',
+      });
+    }
+    return res.send(updatedCard);
+  } catch (err) {
+    // if (err.name === 'CastError') {
+    if (err instanceof MongooseError.CastError) {
+      return res.status(INCORRECT_DATA_ERROR_CODE).send({
+        message: 'Переданы не валидные данные',
+      });
+    }
+    return res.status(DEFAULT_ERROR_CODE).send({
+      message: 'Не удалось изменить карточку',
     });
+  }
 };
 
-module.exports.dislikeCard = async (req, res) => {
-  await Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $pull: { likes: req.user._id } },
-    { new: true },
-  )
-    .then((card) => {
-      if (!card) {
-        return res
-          .status(NOT_FOUND_ERROR_CODE)
-          .send({ message: 'Карточка не найдена' });
-      }
-      return res.status(DEFAULT_SUCCESS_CODE).send(card);
-    })
-    .catch((err) => {
-      if (err.name === 'CastError' || err.name === 'ValidationError') {
-        return res
-          .status(INCORRECT_DATA_ERROR_CODE)
-          .send({ message: 'Переданы не валидные данные' });
-      }
-      return res
-        .status(DEFAULT_ERROR_CODE)
-        .send({ message: 'Не удалось изменить карточку' });
-    });
+module.exports.likeCard = (req, res) => {
+  handleCardLike(req, res, { addLike: true });
+};
+
+module.exports.dislikeCard = (req, res) => {
+  handleCardLike(req, res, { addLike: false });
 };

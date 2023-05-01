@@ -1,3 +1,4 @@
+const { MongooseError } = require('mongoose');
 const User = require('../models/user');
 const {
   SUCCESS_CREATED_CODE,
@@ -10,7 +11,7 @@ module.exports.getUsers = async (req, res) => {
   try {
     const user = await User.find({});
     res.send(user);
-  } catch (e) {
+  } catch (err) {
     res.status(DEFAULT_ERROR_CODE).send({
       message: 'Не удалось получить пользователей',
     });
@@ -24,12 +25,14 @@ module.exports.getUser = async (req, res) => {
     .orFail()
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'CastError') {
+      // if (err.name === 'CastError') {
+      if (err instanceof MongooseError.CastError) {
         return res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
       }
-      if (err.name === 'DocumentNotFoundError') {
+      // if (err.name === 'DocumentNotFoundError') {
+      if (err instanceof MongooseError.DocumentNotFoundError) {
         return res
           .status(NOT_FOUND_ERROR_CODE)
           .send({ message: 'Пользователь не найден' });
@@ -50,7 +53,8 @@ module.exports.createUser = async (req, res) => {
   })
     .then((user) => res.status(SUCCESS_CREATED_CODE).send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
+      // if (err.name === 'ValidationError') {
+      if (err instanceof MongooseError.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -62,52 +66,49 @@ module.exports.createUser = async (req, res) => {
     });
 };
 
-module.exports.updateUserName = async (req, res) => {
+async function updateUser(userId, updateData) {
   try {
-    const { name, about } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, about },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    res.send(updatedUser);
-  } catch (e) {
-    if (e.name === 'ValidationError') {
-      res.status(INCORRECT_DATA_ERROR_CODE).send({
-        message: 'Переданы не валидные данные',
-      });
-      return;
-    }
-    res.status(DEFAULT_ERROR_CODE).send({
-      message: 'Не удалось изменить пользователя',
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
     });
+    return updatedUser;
+  } catch (err) {
+    // if (err.name === 'ValidationError') {
+    if (err instanceof MongooseError.ValidationError) {
+      throw new Error('Переданы не валидные данные');
+    }
+    throw new Error('Не удалось изменить пользователя');
   }
-};
+}
 
-module.exports.updateUserAvatar = async (req, res) => {
-  try {
-    const { avatar } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    res.send(updatedUser);
-  } catch (e) {
-    if (e.name === 'ValidationError') {
+function updateUserWithName(req, res) {
+  const { name, about } = req.body;
+  const userId = req.user._id;
+  updateUser(userId, { name, about })
+    .then((updatedUser) => {
+      res.send(updatedUser);
+    })
+    .catch((err) => {
       res.status(INCORRECT_DATA_ERROR_CODE).send({
-        message: 'Переданы не валидные данные',
+        message: err.message,
       });
-      return;
-    }
-    res.status(DEFAULT_ERROR_CODE).send({
-      message: 'Не удалось изменить пользователя',
     });
-  }
-};
+}
+
+function updateUserWithAvatar(req, res) {
+  const { avatar } = req.body;
+  const userId = req.user._id;
+  updateUser(userId, { avatar })
+    .then((updatedUser) => {
+      res.send(updatedUser);
+    })
+    .catch((err) => {
+      res.status(INCORRECT_DATA_ERROR_CODE).send({
+        message: err.message,
+      });
+    });
+}
+
+module.exports.updateUserName = updateUserWithName;
+module.exports.updateUserAvatar = updateUserWithAvatar;

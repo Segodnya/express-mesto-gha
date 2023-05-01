@@ -1,6 +1,5 @@
 {
   "env": {
-    "browser": true,
     "es2021": true,
     "node": true
   },
@@ -12,9 +11,6 @@
   },
   "plugins": ["react"],
   "rules": {
-    "no-unused-vars": "warn",
-    "consistent-return": "off",
-    "no-console": "off",
     "no-underscore-dangle": [
       "error",
       {

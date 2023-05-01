@@ -33,6 +33,4 @@ app.use(router);
 
 mongoose.connect(MONGO_URL);
 
-app.listen(PORT, () => {
-  console.log(`App listening at port ${PORT}`);
-});
+app.listen(PORT);
