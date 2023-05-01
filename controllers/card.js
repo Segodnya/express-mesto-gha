@@ -110,7 +110,7 @@ module.exports.dislikeCard = async (req, res) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      if (err.name === 'CastError' || err.name === 'ValidationError') {
+      if (err.name === 'CastError') {
         return res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
