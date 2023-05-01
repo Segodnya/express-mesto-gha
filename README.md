@@ -18,3 +18,8 @@ https://github.com/Segodnya/express-mesto-gha
 `npm run start` — запускает сервер  
 `npm run dev` — запускает сервер с hot-reload
 `npm run lint` - запускает проверку ESLint
+
+## Библиотеки
+
+Rate Limit: https://www.npmjs.com/package/express-rate-limit
+Helmet: https://expressjs.com/en/advanced/best-practice-security.html
