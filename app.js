@@ -33,4 +33,6 @@ app.use(router);
 
 mongoose.connect(MONGO_URL);
 
-app.listen(PORT);
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на порту: ${PORT}`);
+});
