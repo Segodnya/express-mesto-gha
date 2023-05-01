@@ -21,5 +21,5 @@ https://github.com/Segodnya/express-mesto-gha
 
 ## Библиотеки
 
-Rate Limit: https://www.npmjs.com/package/express-rate-limit
-Helmet: https://expressjs.com/en/advanced/best-practice-security.html
+- Rate Limit: https://www.npmjs.com/package/express-rate-limit
+- Helmet: https://expressjs.com/en/advanced/best-practice-security.html
