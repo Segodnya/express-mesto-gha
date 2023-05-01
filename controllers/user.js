@@ -1,4 +1,4 @@
-// const { MongooseError } = require('mongoose');
+const mongoose = require('mongoose');
 const User = require('../models/user');
 const {
   SUCCESS_CREATED_CODE,
@@ -25,14 +25,14 @@ module.exports.getUser = async (req, res) => {
     .orFail()
     .then((user) => res.send(user))
     .catch((err) => {
-      if (err.name === 'CastError') {
-        // if (err instanceof MongooseError.CastError) {
+      // if (err.name === 'CastError') {
+      if (err instanceof mongoose.Error.CastError) {
         return res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
       }
-      if (err.name === 'DocumentNotFoundError') {
-        // if (err instanceof MongooseError.DocumentNotFoundError) {
+      // if (err.name === 'DocumentNotFoundError') {
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
         return res
           .status(NOT_FOUND_ERROR_CODE)
           .send({ message: 'Пользователь не найден' });
@@ -53,8 +53,8 @@ module.exports.createUser = async (req, res) => {
   })
     .then((user) => res.status(SUCCESS_CREATED_CODE).send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        // if (err instanceof MongooseError.ValidationError) {
+      // if (err.name === 'ValidationError') {
+      if (err instanceof mongoose.Error.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -74,8 +74,8 @@ async function updateUser(userId, updateData) {
     });
     return updatedUser;
   } catch (err) {
-    if (err.name === 'ValidationError') {
-      // if (err instanceof MongooseError.ValidationError) {
+    // if (err.name === 'ValidationError') {
+    if (err instanceof mongoose.Error.ValidationError) {
       throw new Error('Переданы не валидные данные');
     }
     throw new Error('Не удалось изменить пользователя');

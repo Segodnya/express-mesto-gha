@@ -1,4 +1,4 @@
-// const { MongooseError } = require('mongoose');
+const mongoose = require('mongoose');
 const Card = require('../models/card');
 const {
   DEFAULT_SUCCESS_CODE,
@@ -29,8 +29,8 @@ module.exports.createCard = async (req, res) => {
   })
     .then((card) => res.status(SUCCESS_CREATED_CODE).send(card))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        // if (err instanceof MongooseError.ValidationError) {
+      // if (err.name === 'ValidationError') {
+      if (err instanceof mongoose.Error.ValidationError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -56,8 +56,8 @@ module.exports.deleteCard = async (req, res) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
-        // if (err instanceof MongooseError.CastError) {
+      // if (err.name === 'CastError') {
+      if (err instanceof mongoose.Error.CastError) {
         res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
@@ -68,58 +68,6 @@ module.exports.deleteCard = async (req, res) => {
       }
     });
 };
-
-// module.exports.likeCard = async (req, res) => {
-//   await Card.findByIdAndUpdate(
-//     req.params.cardId,
-//     { $addToSet: { likes: req.user._id } },
-//     { new: true },
-//   )
-//     .then((card) => {
-//       if (!card) {
-//         return res
-//           .status(NOT_FOUND_ERROR_CODE)
-//           .send({ message: 'Карточка не найдена' });
-//       }
-//       return res.status(DEFAULT_SUCCESS_CODE).send(card);
-//     })
-//     .catch((err) => {
-//       if (err.name === 'CastError') {
-//         return res
-//           .status(INCORRECT_DATA_ERROR_CODE)
-//           .send({ message: 'Переданы не валидные данные' });
-//       }
-//       return res
-//         .status(DEFAULT_ERROR_CODE)
-//         .send({ message: 'Не удалось изменить карточку' });
-//     });
-// };
-
-// module.exports.dislikeCard = async (req, res) => {
-//   await Card.findByIdAndUpdate(
-//     req.params.cardId,
-//     { $pull: { likes: req.user._id } },
-//     { new: true },
-//   )
-//     .then((card) => {
-//       if (!card) {
-//         return res
-//           .status(NOT_FOUND_ERROR_CODE)
-//           .send({ message: 'Карточка не найдена' });
-//       }
-//       return res.status(DEFAULT_SUCCESS_CODE).send(card);
-//     })
-//     .catch((err) => {
-//       if (err.name === 'CastError') {
-//         return res
-//           .status(INCORRECT_DATA_ERROR_CODE)
-//           .send({ message: 'Переданы не валидные данные' });
-//       }
-//       return res
-//         .status(DEFAULT_ERROR_CODE)
-//         .send({ message: 'Не удалось изменить карточку' });
-//     });
-// };
 
 const updateLikes = async (req, res, update) => {
   await Card.findByIdAndUpdate(req.params.cardId, update, { new: true })
@@ -132,7 +80,8 @@ const updateLikes = async (req, res, update) => {
       return res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
+      // if (err.name === 'CastError') {
+      if (err instanceof mongoose.Error.CastError) {
         return res
           .status(INCORRECT_DATA_ERROR_CODE)
           .send({ message: 'Переданы не валидные данные' });
