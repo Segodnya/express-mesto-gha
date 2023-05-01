@@ -69,12 +69,60 @@ module.exports.deleteCard = async (req, res) => {
     });
 };
 
-module.exports.likeCard = async (req, res) => {
-  await Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $addToSet: { likes: req.user._id } },
-    { new: true },
-  )
+// module.exports.likeCard = async (req, res) => {
+//   await Card.findByIdAndUpdate(
+//     req.params.cardId,
+//     { $addToSet: { likes: req.user._id } },
+//     { new: true },
+//   )
+//     .then((card) => {
+//       if (!card) {
+//         return res
+//           .status(NOT_FOUND_ERROR_CODE)
+//           .send({ message: 'Карточка не найдена' });
+//       }
+//       return res.status(DEFAULT_SUCCESS_CODE).send(card);
+//     })
+//     .catch((err) => {
+//       if (err.name === 'CastError') {
+//         return res
+//           .status(INCORRECT_DATA_ERROR_CODE)
+//           .send({ message: 'Переданы не валидные данные' });
+//       }
+//       return res
+//         .status(DEFAULT_ERROR_CODE)
+//         .send({ message: 'Не удалось изменить карточку' });
+//     });
+// };
+
+// module.exports.dislikeCard = async (req, res) => {
+//   await Card.findByIdAndUpdate(
+//     req.params.cardId,
+//     { $pull: { likes: req.user._id } },
+//     { new: true },
+//   )
+//     .then((card) => {
+//       if (!card) {
+//         return res
+//           .status(NOT_FOUND_ERROR_CODE)
+//           .send({ message: 'Карточка не найдена' });
+//       }
+//       return res.status(DEFAULT_SUCCESS_CODE).send(card);
+//     })
+//     .catch((err) => {
+//       if (err.name === 'CastError') {
+//         return res
+//           .status(INCORRECT_DATA_ERROR_CODE)
+//           .send({ message: 'Переданы не валидные данные' });
+//       }
+//       return res
+//         .status(DEFAULT_ERROR_CODE)
+//         .send({ message: 'Не удалось изменить карточку' });
+//     });
+// };
+
+const updateLikes = async (req, res, update) => {
+  await Card.findByIdAndUpdate(req.params.cardId, update, { new: true })
     .then((card) => {
       if (!card) {
         return res
@@ -95,28 +143,10 @@ module.exports.likeCard = async (req, res) => {
     });
 };
 
+module.exports.likeCard = async (req, res) => {
+  await updateLikes(req, res, { $addToSet: { likes: req.user._id } });
+};
+
 module.exports.dislikeCard = async (req, res) => {
-  await Card.findByIdAndUpdate(
-    req.params.cardId,
-    { $pull: { likes: req.user._id } },
-    { new: true },
-  )
-    .then((card) => {
-      if (!card) {
-        return res
-          .status(NOT_FOUND_ERROR_CODE)
-          .send({ message: 'Карточка не найдена' });
-      }
-      return res.status(DEFAULT_SUCCESS_CODE).send(card);
-    })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        return res
-          .status(INCORRECT_DATA_ERROR_CODE)
-          .send({ message: 'Переданы не валидные данные' });
-      }
-      return res
-        .status(DEFAULT_ERROR_CODE)
-        .send({ message: 'Не удалось изменить карточку' });
-    });
+  await updateLikes(req, res, { $pull: { likes: req.user._id } });
 };
