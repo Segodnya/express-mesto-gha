@@ -2,6 +2,8 @@
 
 # Проект Mesto фронтенд + бэкенд
 
+Бэкенд сервиса Mesto. Сервер - Express, БД - MongoDB с двумя схемами (пользователи, карточки). Обработка ошибок для запросов. Настроены конфигурации для ESLint, Prettier.
+
 ## Репозиторий
 
 https://github.com/Segodnya/express-mesto-gha
