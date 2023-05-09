@@ -34,7 +34,7 @@ module.exports.getUser = async (req, res, next) => {
 };
 
 // eslint-disable-next-line consistent-return
-module.exports.getMe = async (req, res, next) => {
+module.exports.getMe = (req, res, next) => {
   User.findById(req.user._id)
     .then((user) => {
       if (!user) {
