@@ -71,6 +71,12 @@ module.exports.login = (req, res, next) => {
           return next(new UnauthorizedError('Неверная почта или пароль'));
         }
         const token = jwt.sign({ _id: user._id }, 'some-secret-string', { expiresIn: '7d' });
+        res.cookie('jwt', token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней в миллисекундах
+        });
         return res.send({ token });
       });
     })
