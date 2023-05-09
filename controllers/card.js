@@ -1,71 +1,69 @@
 const mongoose = require('mongoose');
 const Card = require('../models/card');
-const {
-  DEFAULT_SUCCESS_CODE,
-  SUCCESS_CREATED_CODE,
-} = require('../utils/constants');
+const { DEFAULT_SUCCESS_CODE, SUCCESS_CREATED_CODE } = require('../utils/constants');
 const BadRequestError = require('../utils/errors/badRequestError');
 const NotFoundError = require('../utils/errors/notFoundError');
 const ForbiddenError = require('../utils/errors/forbiddenError');
 
-module.exports.getCards = async (req, res, next) => {
-  await Card.find({})
+module.exports.getCards = (req, res, next) => {
+  Card.find({})
     .populate(['owner', 'likes'])
     .then((cards) => res.status(DEFAULT_SUCCESS_CODE).send(cards))
-    .catch((err) => {
-      next(err);
-    });
+    .catch(next);
 };
 
-module.exports.createCard = async (req, res, next) => {
+module.exports.createCard = (req, res, next) => {
   const { name, link } = req.body;
 
-  await Card.create({
-    name,
-    link,
-    owner: req.user._id,
-  })
+  Card.create({ name, link, owner: req.user._id })
     .then((card) => res.status(SUCCESS_CREATED_CODE).send(card))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        next(new BadRequestError(err.message));
-      }
-
-      next(err);
-    });
+    .catch(next);
 };
 
 module.exports.deleteCard = (req, res, next) => {
-  const { cardId } = req.params;
+  const currentUserId = req.user._id;
 
-  Card.findById(cardId)
+  Card.findById(req.params.cardId)
+    .orFail()
     .then((card) => {
       if (!card) {
         return new NotFoundError('Карточка не найдена');
       }
-      if (card.owner.toString() !== cardId) {
+      if (card.owner.toString() !== currentUserId) {
         return new ForbiddenError('Нельзя удалять чужие карточки');
       }
-      return Card.findByIdAndRemove(cardId).then(() => {
-        res.send({ message: 'Карточка удалена' });
-      });
+      return card;
     })
-    .catch(next);
+    .then((card) => Card.deleteOne(card))
+    .then((card) => res.status(DEFAULT_SUCCESS_CODE).send(card))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        return next(new NotFoundError('Карточка не найдена'));
+      }
+      if (err instanceof mongoose.Error.CastError) {
+        return next(new BadRequestError('Переданы не валидные данные'));
+      }
+      if (err.status === 403) {
+        return next(new ForbiddenError('Вы не автор этой карточки'));
+      }
+      return next(err);
+    });
 };
 
 const updateLikes = async (req, res, next, update) => {
   await Card.findByIdAndUpdate(req.params.cardId, update, { new: true })
+    .orFail()
     .then((card) => {
-      if (!card) {
-        return new NotFoundError('Карточка не найдена');
-      }
-      return res.status(DEFAULT_SUCCESS_CODE).send(card);
+      res.status(DEFAULT_SUCCESS_CODE).send(card);
     })
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError('Переданы не валидные данные'));
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        return next(new NotFoundError('Карточка не найдена'));
       }
-      next(err);
+      if (err instanceof mongoose.Error.CastError) {
+        return next(new BadRequestError('Переданы не валидные данные'));
+      }
+      return next(err);
     });
 };
 

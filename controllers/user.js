@@ -2,119 +2,92 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const { SUCCESS_CREATED_CODE, NOT_FOUND_ERROR_CODE, JWT_SECRET } = require('../utils/constants');
+const { SUCCESS_CREATED_CODE, JWT_SECRET } = require('../utils/constants');
 const BadRequestError = require('../utils/errors/badRequestError');
 const ConflictError = require('../utils/errors/conflictError');
+const UnauthorizedError = require('../utils/errors/unauthorizedError');
+const NotFoundError = require('../utils/errors/notFoundError');
 
 module.exports.getUsers = async (req, res, next) => {
-  try {
-    const user = await User.find({});
-    res.send(user);
-  } catch (err) {
-    next(err);
-  }
+  User.find({})
+    .then((users) => res.send(users))
+    .catch(next);
 };
 
-module.exports.getUser = async (req, res, next) => {
-  const { userId } = req.params;
-
-  await User.findById(userId)
+const findUser = (id, res, next) => {
+  User.findById(id)
     .orFail()
     .then((user) => res.send(user))
-    // eslint-disable-next-line consistent-return
     .catch((err) => {
-      if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError('Переданы не валидные данные'));
-      }
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res.status(NOT_FOUND_ERROR_CODE).send({ message: 'Пользователь не найден' });
+        return next(new NotFoundError('Пользователь не найден'));
       }
-      next(err);
+      return next(err);
     });
 };
 
-module.exports.createUser = async (req, res, next) => {
+module.exports.getUser = (req, res, next) => findUser(req.params.userId, res, next);
+module.exports.getMe = (req, res, next) => findUser(req.user._id, res, next);
+
+module.exports.createUser = (req, res, next) => {
   // eslint-disable-next-line object-curly-newline
   const { name, about, avatar, email, password } = req.body;
 
-  await User.create({
-    name,
-    about,
-    avatar,
-    email,
-    password: bcrypt.hash(password, 10),
-  })
-    .then((user) => res.status(SUCCESS_CREATED_CODE).send(user))
-    .catch((err) => {
-      if (err.code === 11000) {
-        next(new ConflictError('Пользователь с данным email уже зарегистрирован'));
-      } else if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError('Переданы не валидные данные'));
-      } else {
-        next(err);
+  bcrypt.hash(password, 10).then((hash) => {
+    User.create({
+      email,
+      password: hash,
+      name,
+      about,
+      avatar,
+    })
+      .then((user) => {
+        const userNoPassword = user.toObject({ useProjection: true });
+        return res.status(SUCCESS_CREATED_CODE).send(userNoPassword);
+      })
+      .catch((err) => {
+        if (err.name === 'ValidationError') {
+          return next(new BadRequestError('Переданы не валидные данные'));
+        }
+        if (err.code === 11000) {
+          return next(new ConflictError('Пользователь с данным email уже зарегистрирован'));
+        }
+        return next(err);
+      });
+  });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  User.findOne({ email })
+    .select('+password')
+    .then((user) => {
+      if (!user) {
+        return next(new UnauthorizedError('Неверная почта или пароль'));
       }
+      return bcrypt.compare(password, user.password).then((matched) => {
+        if (!matched) {
+          return next(new UnauthorizedError('Неверная почта или пароль'));
+        }
+        const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+        return res.send({ token });
+      });
+    })
+    .catch(next);
+};
+
+const updateUser = (id, data, res, next) => {
+  User.findByIdAndUpdate(id, data, { new: true, runValidators: true })
+    .orFail()
+    .then((user) => res.send(user))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        return next(new NotFoundError('Пользователь не найден.'));
+      }
+      return next(err);
     });
 };
 
-module.exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.checkUser(email, password);
-    const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
-    res.send(token);
-  } catch (err) {
-    next(err);
-  }
-};
-
-module.exports.updateUserName = async (req, res, next) => {
-  try {
-    const { name, about } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { name, about },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    res.send(updatedUser);
-  } catch (err) {
-    if (err instanceof mongoose.Error.CastError) {
-      next(new BadRequestError(err.message));
-    } else {
-      next(err);
-    }
-  }
-};
-
-module.exports.updateUserAvatar = async (req, res, next) => {
-  try {
-    const { avatar } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { avatar },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    res.send(updatedUser);
-  } catch (err) {
-    if (err instanceof mongoose.Error.CastError) {
-      next(new BadRequestError(err.message));
-    } else {
-      next(err);
-    }
-  }
-};
-
-// eslint-disable-next-line consistent-return
-module.exports.getMe = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ _id: req.user._id });
-    res.send(user);
-  } catch (err) {
-    return next(err);
-  }
-};
+module.exports.updateUserName = (req, res, next) => updateUser(req.user._id, req.body, res, next);
+module.exports.updateUserAvatar = (req, res, next) => updateUser(req.user._id, req.body, res, next);

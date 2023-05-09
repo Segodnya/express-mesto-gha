@@ -1,17 +1,8 @@
 const userRoutes = require('express').Router();
 
-const {
-  getUsers,
-  getUser,
-  updateUserName,
-  updateUserAvatar,
-  getMe,
-} = require('../controllers/user');
-const {
-  validateUserId,
-  validateUserInfo,
-  validateAvatar,
-} = require('../utils/validators/userValidator');
+// eslint-disable-next-line object-curly-newline
+const { getUsers, getUser, updateUserName, updateUserAvatar, getMe } = require('../controllers/user');
+const { validateUserId, validateUserInfo, validateAvatar } = require('../utils/validators/userValidator');
 
 userRoutes.get('/', getUsers);
 userRoutes.get('/:userId', validateUserId, getUser);
