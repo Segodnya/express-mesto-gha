@@ -21,17 +21,16 @@ const userSchema = new mongoose.Schema(
     },
     avatar: {
       type: String,
-      default:
-        'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
+      default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
       required: true,
       validate: {
-        validator: (v) =>
+        validator: (v) => {
           validator.isURL(v, {
             protocols: ['http', 'https'],
             require_protocol: true,
-          }),
-        message: ({ value }) =>
-          `${value} - некоректный адрес URL. Ожидается адрес в формате: http(s)://(www).site.com`,
+          });
+        },
+        message: ({ value }) => `${value} - некоректный адрес URL. Ожидается адрес в формате: http(s)://(www).site.com`,
       },
     },
     email: {
@@ -52,24 +51,16 @@ const userSchema = new mongoose.Schema(
   { versionKey: false },
 );
 
-userSchema.statics.checkUser = async function (email, password) {
-  try {
-    const user = await this.findOne({ email }).select('+password');
-    if (!user) {
-      return Promise.reject(new UnauthorizedError('Неверная почта или пароль'));
-    }
-    const match = await bcrypt.compare(password, user.password);
-
-    if (!match) {
-      return Promise.reject(new UnauthorizedError('Неверная почта или пароль'));
-    }
-
-    if (user && match) {
-      return user;
-    }
-  } catch (err) {
-    console.log(err);
-  }
+userSchema.statics.checkUser = function (email, password) {
+  return this.findOne({ email })
+    .select('+password')
+    .then((user) => {
+      if (!user) return Promise.reject(new UnauthorizedError('Неверная почта или пароль'));
+      return bcrypt.compare(password, user.password).then((matched) => {
+        if (!matched) return Promise.reject(new UnauthorizedError('Неверная почта или пароль'));
+        return user;
+      });
+    });
 };
 
 module.exports = mongoose.model('user', userSchema);

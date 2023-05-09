@@ -35,28 +35,22 @@ module.exports.createCard = async (req, res, next) => {
     });
 };
 
-module.exports.deleteCard = async (req, res, next) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
 
-  try {
-    const card = await Card.findById(cardId);
-    if (!card) {
-      return new NotFoundError('Карточка не найдена');
-    }
-    if (card.owner.toString() !== cardId) {
-      return new ForbiddenError('Нельзя удалять чужие карточки');
-    }
-    await Card.findByIdAndRemove(cardId);
-    res.send({
-      message: 'Карточка удалена',
-    });
-  } catch (err) {
-    if (err instanceof mongoose.Error.CastError) {
-      next(new BadRequestError('Переданы не валидные данные'));
-    } else {
-      next(err);
-    }
-  }
+  Card.findById(cardId)
+    .then((card) => {
+      if (!card) {
+        return new NotFoundError('Карточка не найдена');
+      }
+      if (card.owner.toString() !== cardId) {
+        return new ForbiddenError('Нельзя удалять чужие карточки');
+      }
+      return Card.findByIdAndRemove(cardId).then(() => {
+        res.send({ message: 'Карточка удалена' });
+      });
+    })
+    .catch(next);
 };
 
 const updateLikes = async (req, res, next, update) => {

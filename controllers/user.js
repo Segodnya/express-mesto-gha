@@ -2,11 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const {
-  SUCCESS_CREATED_CODE,
-  NOT_FOUND_ERROR_CODE,
-  JWT_SECRET,
-} = require('../utils/constants');
+const { SUCCESS_CREATED_CODE, NOT_FOUND_ERROR_CODE, JWT_SECRET } = require('../utils/constants');
 const BadRequestError = require('../utils/errors/badRequestError');
 const ConflictError = require('../utils/errors/conflictError');
 
@@ -25,20 +21,20 @@ module.exports.getUser = async (req, res, next) => {
   await User.findById(userId)
     .orFail()
     .then((user) => res.send(user))
+    // eslint-disable-next-line consistent-return
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
         next(new BadRequestError('Переданы не валидные данные'));
       }
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return res
-          .status(NOT_FOUND_ERROR_CODE)
-          .send({ message: 'Пользователь не найден' });
+        return res.status(NOT_FOUND_ERROR_CODE).send({ message: 'Пользователь не найден' });
       }
       next(err);
     });
 };
 
 module.exports.createUser = async (req, res, next) => {
+  // eslint-disable-next-line object-curly-newline
   const { name, about, avatar, email, password } = req.body;
 
   await User.create({
@@ -51,9 +47,7 @@ module.exports.createUser = async (req, res, next) => {
     .then((user) => res.status(SUCCESS_CREATED_CODE).send(user))
     .catch((err) => {
       if (err.code === 11000) {
-        next(
-          new ConflictError('Пользователь с данным email уже зарегистрирован'),
-        );
+        next(new ConflictError('Пользователь с данным email уже зарегистрирован'));
       } else if (err instanceof mongoose.Error.CastError) {
         next(new BadRequestError('Переданы не валидные данные'));
       } else {
@@ -115,6 +109,7 @@ module.exports.updateUserAvatar = async (req, res, next) => {
   }
 };
 
+// eslint-disable-next-line consistent-return
 module.exports.getMe = async (req, res, next) => {
   try {
     const user = await User.findOne({ _id: req.user._id });
