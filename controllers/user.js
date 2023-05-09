@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const { SUCCESS_CREATED_CODE, JWT_SECRET } = require('../utils/constants');
+const { SUCCESS_CREATED_CODE } = require('../utils/constants');
 const BadRequestError = require('../utils/errors/badRequestError');
 const ConflictError = require('../utils/errors/conflictError');
 const UnauthorizedError = require('../utils/errors/unauthorizedError');
@@ -70,7 +70,7 @@ module.exports.login = (req, res, next) => {
         if (!matched) {
           return next(new UnauthorizedError('Неверная почта или пароль'));
         }
-        const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ _id: user._id }, 'some-secret-string', { expiresIn: '7d' });
         return res.send({ token });
       });
     })

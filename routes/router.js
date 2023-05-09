@@ -19,6 +19,6 @@ router.use('/cards', cardsRouter);
 router.use('/*', (req, res, next) => {
   next(new NotFoundError('Запрашиваемый адрес не найден. Проверьте URL и метод запроса'));
 });
-router.use(errors({ message: 'Ошибка валидации данных!' }));
+router.use(errors({ message: 'Ошибка валидации данных' }));
 
 module.exports = router;
