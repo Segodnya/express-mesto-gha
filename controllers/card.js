@@ -50,27 +50,37 @@ module.exports.deleteCard = (req, res, next) => {
     });
 };
 
+// eslint-disable-next-line consistent-return
 const updateLikes = async (req, res, next, update) => {
-  await Card.findByIdAndUpdate(req.params.cardId, update, { new: true })
-    .orFail()
-    .then((card) => {
-      res.status(DEFAULT_SUCCESS_CODE).send(card);
-    })
-    .catch((err) => {
-      if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return next(new NotFoundError('Карточка не найдена'));
-      }
-      if (err instanceof mongoose.Error.CastError) {
-        return next(new BadRequestError('Переданы не валидные данные'));
-      }
-      return next(err);
-    });
+  try {
+    // eslint-disable-next-line max-len
+    const updatedCard = await Card.findByIdAndUpdate(req.params.cardId, update, { new: true }).orFail();
+    res.status(DEFAULT_SUCCESS_CODE).send(updatedCard);
+  } catch (err) {
+    if (err instanceof mongoose.Error.DocumentNotFoundError) {
+      return next(new NotFoundError('Карточка не найдена'));
+    }
+    if (err instanceof mongoose.Error.CastError) {
+      return next(new BadRequestError('Переданы не валидные данные'));
+    }
+    return next(err);
+  }
 };
 
-module.exports.likeCard = async (req, res) => {
-  await updateLikes(req, res, { $addToSet: { likes: req.user._id } });
+// eslint-disable-next-line consistent-return
+module.exports.likeCard = async (req, res, next) => {
+  try {
+    await updateLikes(req, res, next, { $addToSet: { likes: req.user._id } });
+  } catch (err) {
+    return next(err);
+  }
 };
 
-module.exports.dislikeCard = async (req, res) => {
-  await updateLikes(req, res, { $pull: { likes: req.user._id } });
+// eslint-disable-next-line consistent-return
+module.exports.dislikeCard = async (req, res, next) => {
+  try {
+    await updateLikes(req, res, next, { $pull: { likes: req.user._id } });
+  } catch (err) {
+    return next(err);
+  }
 };
