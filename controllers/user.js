@@ -1,24 +1,25 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/user');
 const {
   SUCCESS_CREATED_CODE,
   NOT_FOUND_ERROR_CODE,
-  DEFAULT_ERROR_CODE,
-  INCORRECT_DATA_ERROR_CODE,
+  JWT_SECRET,
 } = require('../utils/constants');
+const BadRequestError = require('../utils/errors/badRequestError');
+const ConflictError = require('../utils/errors/conflictError');
 
-module.exports.getUsers = async (req, res) => {
+module.exports.getUsers = async (req, res, next) => {
   try {
     const user = await User.find({});
     res.send(user);
   } catch (err) {
-    res.status(DEFAULT_ERROR_CODE).send({
-      message: 'Не удалось получить пользователей',
-    });
+    next(err);
   }
 };
 
-module.exports.getUser = async (req, res) => {
+module.exports.getUser = async (req, res, next) => {
   const { userId } = req.params;
 
   await User.findById(userId)
@@ -26,85 +27,99 @@ module.exports.getUser = async (req, res) => {
     .then((user) => res.send(user))
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        return res
-          .status(INCORRECT_DATA_ERROR_CODE)
-          .send({ message: 'Переданы не валидные данные' });
+        next(new BadRequestError('Переданы не валидные данные'));
       }
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
         return res
           .status(NOT_FOUND_ERROR_CODE)
           .send({ message: 'Пользователь не найден' });
       }
-      return res
-        .status(DEFAULT_ERROR_CODE)
-        .send({ message: 'Не удалось найти пользователя' });
+      next(err);
     });
 };
 
-module.exports.createUser = async (req, res) => {
-  const { name, about, avatar } = req.body;
+module.exports.createUser = async (req, res, next) => {
+  const { name, about, avatar, email, password } = req.body;
 
   await User.create({
     name,
     about,
     avatar,
+    email,
+    password: bcrypt.hash(password, 10),
   })
     .then((user) => res.status(SUCCESS_CREATED_CODE).send(user))
     .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        res
-          .status(INCORRECT_DATA_ERROR_CODE)
-          .send({ message: 'Переданы не валидные данные' });
+      if (err.code === 11000) {
+        next(
+          new ConflictError('Пользователь с данным email уже зарегистрирован'),
+        );
+      } else if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Переданы не валидные данные'));
       } else {
-        res
-          .status(DEFAULT_ERROR_CODE)
-          .send({ message: 'Не удалось создать пользователя' });
+        next(err);
       }
     });
 };
 
-async function updateUser(userId, updateData) {
+module.exports.login = async (req, res, next) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
-      new: true,
-      runValidators: true,
-    });
-    return updatedUser;
+    const { email, password } = req.body;
+    const user = await User.checkUser(email, password);
+    const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    res.send(token);
   } catch (err) {
-    if (err instanceof mongoose.Error.ValidationError) {
-      throw new Error('Переданы не валидные данные');
-    }
-    throw new Error('Не удалось изменить пользователя');
+    next(err);
   }
-}
+};
 
-function updateUserWithName(req, res) {
-  const { name, about } = req.body;
-  const userId = req.user._id;
-  updateUser(userId, { name, about })
-    .then((updatedUser) => {
-      res.send(updatedUser);
-    })
-    .catch((err) => {
-      res.status(INCORRECT_DATA_ERROR_CODE).send({
-        message: err.message,
-      });
-    });
-}
+module.exports.updateUserName = async (req, res, next) => {
+  try {
+    const { name, about } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, about },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+    res.send(updatedUser);
+  } catch (err) {
+    if (err instanceof mongoose.Error.CastError) {
+      next(new BadRequestError(err.message));
+    } else {
+      next(err);
+    }
+  }
+};
 
-function updateUserWithAvatar(req, res) {
-  const { avatar } = req.body;
-  const userId = req.user._id;
-  updateUser(userId, { avatar })
-    .then((updatedUser) => {
-      res.send(updatedUser);
-    })
-    .catch((err) => {
-      res.status(INCORRECT_DATA_ERROR_CODE).send({
-        message: err.message,
-      });
-    });
-}
+module.exports.updateUserAvatar = async (req, res, next) => {
+  try {
+    const { avatar } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+    res.send(updatedUser);
+  } catch (err) {
+    if (err instanceof mongoose.Error.CastError) {
+      next(new BadRequestError(err.message));
+    } else {
+      next(err);
+    }
+  }
+};
 
-module.exports.updateUserName = updateUserWithName;
-module.exports.updateUserAvatar = updateUserWithAvatar;
+module.exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ _id: req.user._id });
+    res.send(user);
+  } catch (err) {
+    return next(err);
+  }
+};
