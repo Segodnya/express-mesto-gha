@@ -20,34 +20,27 @@ module.exports.createCard = (req, res, next) => {
     .catch(next);
 };
 
-module.exports.deleteCard = (req, res, next) => {
-  const currentUserId = req.user._id;
-
-  Card.findById(req.params.cardId)
-    .orFail()
-    .then((card) => {
-      if (!card) {
-        return new NotFoundError('Карточка не найдена');
-      }
-      if (card.owner.toString() !== currentUserId) {
-        return new ForbiddenError('Нельзя удалять чужие карточки');
-      }
-      return card;
-    })
-    .then((card) => Card.deleteOne(card))
-    .then((card) => res.status(DEFAULT_SUCCESS_CODE).send(card))
-    .catch((err) => {
-      if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return next(new NotFoundError('Карточка не найдена'));
-      }
-      if (err instanceof mongoose.Error.CastError) {
-        return next(new BadRequestError('Переданы не валидные данные'));
-      }
-      if (err.status === 403) {
-        return next(new ForbiddenError('Вы не автор этой карточки'));
-      }
-      return next(err);
+// eslint-disable-next-line consistent-return
+module.exports.deleteCard = async (req, res, next) => {
+  try {
+    const card = await Card.findById(req.params.cardId);
+    if (!card) {
+      return new NotFoundError('Карточка не найдена');
+    }
+    if (card.owner.toString() !== req.params.cardId) {
+      return new ForbiddenError('Нельзя удалять чужие карточки');
+    }
+    await Card.findByIdAndRemove(req.params.cardId);
+    res.send({
+      message: 'Карточка удалена',
     });
+  } catch (err) {
+    if (err instanceof mongoose.Error.CastError) {
+      next(new BadRequestError('Переданы не валидные данные'));
+    } else {
+      next(err);
+    }
+  }
 };
 
 // eslint-disable-next-line consistent-return
