@@ -5,8 +5,8 @@ const { getUsers, getUser, updateUserName, updateUserAvatar, getMe } = require('
 const { validateUserId, validateUserInfo, validateAvatar } = require('../utils/validators/userValidator');
 
 userRoutes.get('/', getUsers);
-userRoutes.get('/:userId', validateUserId, getUser);
 userRoutes.get('/me', getMe);
+userRoutes.get('/:userId', validateUserId, getUser);
 userRoutes.patch('/me', validateUserInfo, updateUserName);
 userRoutes.patch('/me/avatar', validateAvatar, updateUserAvatar);
 

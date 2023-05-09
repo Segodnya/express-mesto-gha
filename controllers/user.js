@@ -14,71 +14,20 @@ module.exports.getUsers = async (req, res, next) => {
     .catch(next);
 };
 
-// module.exports.getUser = async (req, res, next) => {
-//   const { userId } = req.params;
-
-//   User.findById(userId)
-//     .orFail()
-//     .then((user) => {
-//       if (!user) {
-//         next(new NotFoundError('Пользователь не найден'));
-//       }
-//       res.send({ data: user });
-//     })
-//     .catch((err) => {
-//       if (err instanceof mongoose.Error.CastError) {
-//         next(new BadRequestError('Переданы не валидные данные'));
-//       }
-//       next(err);
-//     });
-// };
-
-module.exports.getUser = async (req, res, next) => {
-  try {
-    const { id } = req.params.id;
-    const user = await User.findById(id);
-
-    if (!user) {
-      next(new NotFoundError('Пользователь не найден'));
-    }
-    res.send(user);
-  } catch (err) {
-    if (err instanceof mongoose.Error.CastError) {
-      next(new BadRequestError('Переданы не валидные данные'));
-    } else {
-      next(err);
-    }
-  }
+const findUser = (id, res, next) => {
+  User.findById(id)
+    .orFail()
+    .then((user) => res.send(user))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        return next(new NotFoundError('Пользователь не найден'));
+      }
+      return next(err);
+    });
 };
 
-// eslint-disable-next-line consistent-return
-// module.exports.getMe = (req, res, next) => {
-//   User.findById(req.user._id)
-//     .then((user) => {
-//       if (!user) {
-//         next(new NotFoundError('Пользователь не найден'));
-//       }
-//       res.status(DEFAULT_SUCCESS_CODE).semd(user);
-//     })
-//     .catch((err) => {
-//       if (err instanceof mongoose.Error.CastError) {
-//         next(new BadRequestError('Переданы не валидные данные'));
-//       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
-//         next(new NotFoundError('Пользователь не найден'));
-//       } else {
-//         next(err);
-//       }
-//     });
-// };
-
-module.exports.getMe = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ _id: req.user._id });
-    return res.send(user);
-  } catch (err) {
-    return next(err);
-  }
-};
+module.exports.getUser = (req, res, next) => findUser(req.params.userId, res, next);
+module.exports.getMe = (req, res, next) => findUser(req.user._id, res, next);
 
 module.exports.createUser = (req, res, next) => {
   // eslint-disable-next-line object-curly-newline
