@@ -14,20 +14,33 @@ module.exports.getUsers = async (req, res, next) => {
     .catch(next);
 };
 
-const findUser = (id, res, next) => {
-  User.findById(id)
+module.exports.getUser = async (req, res, next) => {
+  const { userId } = req.params;
+
+  await User.findById(userId)
     .orFail()
     .then((user) => res.send(user))
+    // eslint-disable-next-line consistent-return
     .catch((err) => {
-      if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        return next(new NotFoundError('Пользователь не найден'));
+      if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Переданы не валидные данные'));
       }
-      return next(err);
+      if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFoundError('Пользователь не найден'));
+      }
+      next(err);
     });
 };
 
-module.exports.getUser = (req, res, next) => findUser(req.params.userId, res, next);
-module.exports.getMe = (req, res, next) => findUser(req.user._id, res, next);
+// eslint-disable-next-line consistent-return
+module.exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findOne({ _id: req.user._id });
+    res.send(user);
+  } catch (err) {
+    return next(err);
+  }
+};
 
 module.exports.createUser = (req, res, next) => {
   // eslint-disable-next-line object-curly-newline
