@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('../models/user');
-const { SUCCESS_CREATED_CODE } = require('../utils/constants');
+const { SUCCESS_CREATED_CODE, DEFAULT_SUCCESS_CODE } = require('../utils/constants');
 const BadRequestError = require('../utils/errors/badRequestError');
 const ConflictError = require('../utils/errors/conflictError');
 const UnauthorizedError = require('../utils/errors/unauthorizedError');
@@ -17,16 +17,17 @@ module.exports.getUsers = async (req, res, next) => {
 module.exports.getUser = async (req, res, next) => {
   const { userId } = req.params;
 
-  await User.findById(userId)
+  User.findById(userId)
     .orFail()
-    .then((user) => res.send(user))
-    // eslint-disable-next-line consistent-return
+    .then((user) => {
+      if (!user) {
+        next(new NotFoundError('Пользователь не найден'));
+      }
+      res.send({ data: user });
+    })
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
         next(new BadRequestError('Переданы не валидные данные'));
-      }
-      if (err instanceof mongoose.Error.DocumentNotFoundError) {
-        next(new NotFoundError('Пользователь не найден'));
       }
       next(err);
     });
@@ -34,12 +35,22 @@ module.exports.getUser = async (req, res, next) => {
 
 // eslint-disable-next-line consistent-return
 module.exports.getMe = async (req, res, next) => {
-  try {
-    const user = await User.findOne({ _id: req.user._id });
-    res.send(user);
-  } catch (err) {
-    return next(err);
-  }
+  User.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        next(new NotFoundError('Пользователь не найден'));
+      }
+      res.status(DEFAULT_SUCCESS_CODE).semd(user);
+    })
+    .catch((err) => {
+      if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Переданы не валидные данные'));
+      } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFoundError('Пользователь не найден'));
+      } else {
+        next(err);
+      }
+    });
 };
 
 module.exports.createUser = (req, res, next) => {
