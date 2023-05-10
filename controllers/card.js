@@ -61,24 +61,24 @@ const updateLikes = async (req, res, next, update) => {
   }
 };
 
+// Убрать блок try-catch как излишнюю обертку:
+// поймать Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+// без блока catch при отправке PUT на /cards/:cardId/likes
+// ...
 // eslint-disable-next-line consistent-return
-module.exports.likeCard = (req, res, next) => {
-  updateLikes(req, res, next, { $addToSet: { likes: req.user._id } })
-    .then(() => {
-      res.status(DEFAULT_SUCCESS_CODE).send({ message: 'Карточка лайкнута' });
-    })
-    .catch((err) => {
-      next(err);
-    });
+module.exports.likeCard = async (req, res, next) => {
+  try {
+    await updateLikes(req, res, next, { $addToSet: { likes: req.user._id } });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 // eslint-disable-next-line consistent-return
-module.exports.dislikeCard = (req, res, next) => {
-  updateLikes(req, res, next, { $pull: { likes: req.user._id } })
-    .then(() => {
-      res.status(DEFAULT_SUCCESS_CODE).send({ message: 'Вы убрали лайк с карточки' });
-    })
-    .catch((err) => {
-      next(err);
-    });
+module.exports.dislikeCard = async (req, res, next) => {
+  try {
+    await updateLikes(req, res, next, { $pull: { likes: req.user._id } });
+  } catch (err) {
+    return next(err);
+  }
 };
