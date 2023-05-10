@@ -30,10 +30,9 @@ module.exports.deleteCard = (req, res, next) => {
       if (card.owner.toString() !== currentUserId) {
         throw new ForbiddenError('Нельзя удалить чужую карточку');
       }
-      return card;
+      return Card.findByIdAndDelete(card._id);
     })
-    .then((card) => Card.deleteOne(card))
-    .then((card) => res.status(DEFAULT_SUCCESS_CODE).send(card))
+    .then((deletedCard) => res.status(DEFAULT_SUCCESS_CODE).send(deletedCard))
     .catch((err) => {
       if (err instanceof mongoose.Error.DocumentNotFoundError) {
         return next(new NotFoundError('Карточка не найдена'));
@@ -63,19 +62,23 @@ const updateLikes = async (req, res, next, update) => {
 };
 
 // eslint-disable-next-line consistent-return
-module.exports.likeCard = async (req, res, next) => {
-  try {
-    await updateLikes(req, res, next, { $addToSet: { likes: req.user._id } });
-  } catch (err) {
-    return next(err);
-  }
+module.exports.likeCard = (req, res, next) => {
+  updateLikes(req, res, next, { $addToSet: { likes: req.user._id } })
+    .then(() => {
+      res.status(DEFAULT_SUCCESS_CODE).send({ message: 'Карточка лайкнута' });
+    })
+    .catch((err) => {
+      next(err);
+    });
 };
 
 // eslint-disable-next-line consistent-return
-module.exports.dislikeCard = async (req, res, next) => {
-  try {
-    await updateLikes(req, res, next, { $pull: { likes: req.user._id } });
-  } catch (err) {
-    return next(err);
-  }
+module.exports.dislikeCard = (req, res, next) => {
+  updateLikes(req, res, next, { $pull: { likes: req.user._id } })
+    .then(() => {
+      res.status(DEFAULT_SUCCESS_CODE).send({ message: 'Вы убрали лайк с карточки' });
+    })
+    .catch((err) => {
+      next(err);
+    });
 };
